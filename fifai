@@ -3,25 +3,45 @@ local player = Players.LocalPlayer
 
 -- GUI
 local gui = Instance.new("ScreenGui")
+gui.Name = "SlappleFarmGUI"
 gui.ResetOnSpawn = false
 gui.Parent = player:WaitForChild("PlayerGui")
 
 local frame = Instance.new("Frame")
-frame.Size = UDim2.new(0, 200, 0, 100)
-frame.Position = UDim2.new(0.5, -100, 0.5, -50)
+frame.Size = UDim2.new(0, 220, 0, 120)
+frame.Position = UDim2.new(0.5, -110, 0.5, -60)
+frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
 frame.Parent = gui
 
+local frameCorner = Instance.new("UICorner")
+frameCorner.CornerRadius = UDim.new(0,8)
+frameCorner.Parent = frame
+
+-- Nút X đỏ
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0,25,0,25)
+closeButton.Position = UDim2.new(1,-30,0,5)
+closeButton.BackgroundColor3 = Color3.fromRGB(255,0,0)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.fromRGB(255,255,255)
+closeButton.Parent = frame
+
+local closeCorner = Instance.new("UICorner")
+closeCorner.CornerRadius = UDim.new(0,6)
+closeCorner.Parent = closeButton
+
+-- Nút bật/tắt
 local toggle = Instance.new("TextButton")
-toggle.Size = UDim2.new(0.9, 0, 0.4, 0)
-toggle.Position = UDim2.new(0.05, 0, 0.1, 0)
+toggle.Size = UDim2.new(0.9,0,0.4,0)
+toggle.Position = UDim2.new(0.05,0,0.3,0)
+toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+toggle.TextColor3 = Color3.fromRGB(255,255,255)
 toggle.Text = "BẬT"
 toggle.Parent = frame
 
-local close = Instance.new("TextButton")
-close.Size = UDim2.new(0.9, 0, 0.4, 0)
-close.Position = UDim2.new(0.05, 0, 0.55, 0)
-close.Text = "THOÁT"
-close.Parent = frame
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.CornerRadius = UDim.new(0,6)
+toggleCorner.Parent = toggle
 
 local enabled = false
 
@@ -30,7 +50,7 @@ toggle.MouseButton1Click:Connect(function()
 	toggle.Text = enabled and "TẮT" or "BẬT"
 end)
 
-close.MouseButton1Click:Connect(function()
+closeButton.MouseButton1Click:Connect(function()
 	gui:Destroy()
 end)
 
@@ -41,22 +61,22 @@ task.spawn(function()
 			local hrp = character and character:FindFirstChild("HumanoidRootPart")
 
 			local slapplesFolder = workspace:FindFirstChild("Arena")
-				and workspace.Arena:FindFirstChild("isLand")
+				and workspace.Arena:FindFirstChild("island5")
 				and workspace.Arena.isLand5:FindFirstChild("Slapples")
 
 			if hrp and slapplesFolder then
 				for _, obj in ipairs(slapplesFolder:GetChildren()) do
-					if enabled then
-						if obj:IsA("Model") then
-							local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
-
-							if part then
-								hrp.CFrame = part.CFrame + Vector3.new(0, 3, 0)
-								task.wait(0.5)
-							end
-						end
-					else
+					if not enabled then
 						break
+					end
+
+					if obj:IsA("Model") then
+						local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
+
+						if part then
+							hrp.CFrame = part.CFrame + Vector3.new(0,3,0)
+							task.wait(0.5)
+						end
 					end
 				end
 			end
