@@ -1,255 +1,90 @@
---!strict
--- LocalScript for Roblox Studio (place in StarterPlayerScripts).
--- This is intended for games/experiences you own or have permission to test.
--- It creates a small GUI that repeatedly moves the local player through each
--- Model under workspace.Arena.isLand.Slapples.
-
 local Players = game:GetService("Players")
-local TweenService = game:GetService("TweenService")
-local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
 
-local LOCAL_PLAYER = Players.LocalPlayer
-local TARGET_FOLDER_PATH = { "Arena", "island5", "Slapples" }
-local MOVE_TIME_SECONDS = 0.35
-local WAIT_BETWEEN_TARGETS_SECONDS = 0.2
-local TELEPORT_HEIGHT_OFFSET = Vector3.new(0, 4, 0)
+-- GUI
+local gui = Instance.new("ScreenGui")
+gui.Name = "SlappleFarmGUI"
+gui.ResetOnSpawn = false
+gui.Parent = player:WaitForChild("PlayerGui")
 
-local isRunning = false
-local isClosed = false
-local currentTween: Tween? = nil
-local loopStarted = false
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 220, 0, 120)
+frame.Position = UDim2.new(0.5, -110, 0.5, -60)
+frame.BackgroundColor3 = Color3.fromRGB(35,35,35)
+frame.Parent = gui
 
-local function findByPath(root: Instance, path: { string }): Instance?
-	local current: Instance? = root
+local frameCorner = Instance.new("UICorner")
+frameCorner.Parent = frame
 
-	for _, childName in ipairs(path) do
-		if current == nil then
-			return nil
-		end
+-- Nút X đỏ
+local closeButton = Instance.new("TextButton")
+closeButton.Size = UDim2.new(0,25,0,25)
+closeButton.Position = UDim2.new(1,-30,0,5)
+closeButton.BackgroundColor3 = Color3.fromRGB(255,0,0)
+closeButton.Text = "X"
+closeButton.TextColor3 = Color3.new(1,1,1)
+closeButton.Parent = frame
 
-		current = current:FindFirstChild(childName)
-	end
+local closeCorner = Instance.new("UICorner")
+closeCorner.Parent = closeButton
 
-	return current
-end
+-- Nút bật/tắt
+local toggle = Instance.new("TextButton")
+toggle.Size = UDim2.new(0.9,0,0.4,0)
+toggle.Position = UDim2.new(0.05,0,0.35,0)
+toggle.BackgroundColor3 = Color3.fromRGB(0,170,255)
+toggle.TextColor3 = Color3.new(1,1,1)
+toggle.Text = "BẬT"
+toggle.Parent = frame
 
-local function getCharacterRoot(): BasePart?
-	local character = LOCAL_PLAYER.Character or LOCAL_PLAYER.CharacterAdded:Wait()
-	return character:FindFirstChild("HumanoidRootPart") :: BasePart?
-end
+local toggleCorner = Instance.new("UICorner")
+toggleCorner.Parent = toggle
 
-local function getTargetCFrame(model: Model): CFrame?
-	if model.PrimaryPart ~= nil then
-		return model.PrimaryPart.CFrame + TELEPORT_HEIGHT_OFFSET
-	end
+local enabled = false
 
-	local firstPart = model:FindFirstChildWhichIsA("BasePart", true)
-	if firstPart ~= nil then
-		return firstPart.CFrame + TELEPORT_HEIGHT_OFFSET
-	end
+toggle.MouseButton1Click:Connect(function()
+	enabled = not enabled
+	toggle.Text = enabled and "TẮT" or "BẬT"
+end)
 
-	local pivot = model:GetPivot()
-	return pivot + TELEPORT_HEIGHT_OFFSET
-end
+closeButton.MouseButton1Click:Connect(function()
+	gui:Destroy()
+end)
 
-local function collectSlappleModels(): { Model }
-	local slapples = findByPath(Workspace, TARGET_FOLDER_PATH)
-	local models = {}
+task.spawn(function()
+	while task.wait(0.2) do
+		if enabled then
+			local character = player.Character or player.CharacterAdded:Wait()
+			local hrp = character:FindFirstChild("HumanoidRootPart")
 
-	if slapples == nil then
-		warn("Cannot find workspace.Arena.isLand.Slapples")
-		return models
-	end
+			local slapplesFolder = workspace:FindFirstChild("Arena")
+				and workspace.Arena:FindFirstChild("isLand5")
+				and workspace.Arena.isLand5:FindFirstChild("Slapples")
 
-	for _, child in ipairs(slapples:GetChildren()) do
-		if child:IsA("Model") then
-			table.insert(models, child)
-		end
-	end
+			if hrp and slapplesFolder then
+				for _, obj in ipairs(slapplesFolder:GetChildren()) do
+					if not enabled then
+						break
+					end
 
-	table.sort(models, function(left: Model, right: Model): boolean
-		return left.Name < right.Name
-	end)
+					if obj:IsA("Model") then
+						local part = obj.PrimaryPart or obj:FindFirstChildWhichIsA("BasePart", true)
 
-	return models
-end
+						if part then
+							-- Đặt phía trên vật thể
+							hrp.CFrame = part.CFrame + Vector3.new(0,6,0)
 
-local function moveRootTo(rootPart: BasePart, targetCFrame: CFrame)
-	if currentTween ~= nil then
-		currentTween:Cancel()
-		currentTween = nil
-	end
+							-- Chờ rơi xuống
+							task.wait(0.8)
 
-	-- Smooth movement is used instead of an instant jump so the local character
-	-- appears to travel between points in normal Roblox physics replication.
-	local tween = TweenService:Create(
-		rootPart,
-		TweenInfo.new(MOVE_TIME_SECONDS, Enum.EasingStyle.Linear, Enum.EasingDirection.Out),
-		{ CFrame = targetCFrame }
-	)
+							-- Đứng sát vật thể
+							hrp.CFrame = part.CFrame + Vector3.new(0,2,0)
 
-	currentTween = tween
-	tween:Play()
-	tween.Completed:Wait()
-
-	if currentTween == tween then
-		currentTween = nil
-	end
-end
-
-local function createGui()
-	local screenGui = Instance.new("ScreenGui")
-	screenGui.Name = "SlapplesTeleportGui"
-	screenGui.ResetOnSpawn = false
-	screenGui.IgnoreGuiInset = true
-
-	local frame = Instance.new("Frame")
-	frame.Name = "Panel"
-	frame.AnchorPoint = Vector2.new(0, 0.5)
-	frame.Position = UDim2.fromOffset(16, 180)
-	frame.Size = UDim2.fromOffset(220, 112)
-	frame.BackgroundColor3 = Color3.fromRGB(30, 32, 40)
-	frame.BorderSizePixel = 0
-	frame.Parent = screenGui
-
-	local corner = Instance.new("UICorner")
-	corner.CornerRadius = UDim.new(0, 10)
-	corner.Parent = frame
-
-	local title = Instance.new("TextLabel")
-	title.Name = "Title"
-	title.BackgroundTransparency = 1
-	title.Position = UDim2.fromOffset(12, 8)
-	title.Size = UDim2.fromOffset(170, 24)
-	title.Font = Enum.Font.GothamBold
-	title.Text = "Slapples TP"
-	title.TextColor3 = Color3.fromRGB(255, 255, 255)
-	title.TextSize = 16
-	title.TextXAlignment = Enum.TextXAlignment.Left
-	title.Parent = frame
-
-	local closeButton = Instance.new("TextButton")
-	closeButton.Name = "CloseButton"
-	closeButton.Position = UDim2.fromOffset(184, 8)
-	closeButton.Size = UDim2.fromOffset(28, 24)
-	closeButton.BackgroundColor3 = Color3.fromRGB(190, 60, 60)
-	closeButton.Font = Enum.Font.GothamBold
-	closeButton.Text = "X"
-	closeButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	closeButton.TextSize = 14
-	closeButton.Parent = frame
-
-	local closeCorner = Instance.new("UICorner")
-	closeCorner.CornerRadius = UDim.new(0, 6)
-	closeCorner.Parent = closeButton
-
-	local toggleButton = Instance.new("TextButton")
-	toggleButton.Name = "ToggleButton"
-	toggleButton.Position = UDim2.fromOffset(12, 44)
-	toggleButton.Size = UDim2.fromOffset(196, 36)
-	toggleButton.BackgroundColor3 = Color3.fromRGB(55, 140, 80)
-	toggleButton.Font = Enum.Font.GothamBold
-	toggleButton.Text = "Bật"
-	toggleButton.TextColor3 = Color3.fromRGB(255, 255, 255)
-	toggleButton.TextSize = 16
-	toggleButton.Parent = frame
-
-	local toggleCorner = Instance.new("UICorner")
-	toggleCorner.CornerRadius = UDim.new(0, 8)
-	toggleCorner.Parent = toggleButton
-
-	local status = Instance.new("TextLabel")
-	status.Name = "Status"
-	status.BackgroundTransparency = 1
-	status.Position = UDim2.fromOffset(12, 84)
-	status.Size = UDim2.fromOffset(196, 20)
-	status.Font = Enum.Font.Gotham
-	status.Text = "Trạng thái: Tắt"
-	status.TextColor3 = Color3.fromRGB(210, 215, 225)
-	status.TextSize = 13
-	status.TextXAlignment = Enum.TextXAlignment.Left
-	status.Parent = frame
-
-	local function refreshState()
-		if isRunning then
-			toggleButton.Text = "Tắt"
-			toggleButton.BackgroundColor3 = Color3.fromRGB(190, 110, 45)
-			status.Text = "Trạng thái: Đang chạy"
-		else
-			toggleButton.Text = "Bật"
-			toggleButton.BackgroundColor3 = Color3.fromRGB(55, 140, 80)
-			status.Text = "Trạng thái: Tắt"
-		end
-	end
-
-	toggleButton.MouseButton1Click:Connect(function()
-		isRunning = not isRunning
-
-		if currentTween ~= nil then
-			currentTween:Cancel()
-			currentTween = nil
-		end
-
-		refreshState()
-	end)
-
-	closeButton.MouseButton1Click:Connect(function()
-		isClosed = true
-		isRunning = false
-
-		if currentTween ~= nil then
-			currentTween:Cancel()
-			currentTween = nil
-		end
-
-		screenGui:Destroy()
-	end)
-
-	screenGui.Parent = LOCAL_PLAYER:WaitForChild("PlayerGui")
-	refreshState()
-end
-
-createGui()
-
-local function runTeleportLoop()
-	while not isClosed do
-		if not isRunning then
-			task.wait(0.1)
-			continue
-		end
-
-		local models = collectSlappleModels()
-
-		for _, model in ipairs(models) do
-			if isClosed then
-				return
+							task.wait(0.3)
+						end
+					end
+				end
 			end
-
-			while not isRunning and not isClosed do
-				task.wait(0.1)
-			end
-
-			if isClosed then
-				return
-			end
-
-			local rootPart = getCharacterRoot()
-			local targetCFrame = getTargetCFrame(model)
-
-			if rootPart ~= nil and targetCFrame ~= nil then
-				moveRootTo(rootPart, targetCFrame)
-			end
-
-			task.wait(WAIT_BETWEEN_TARGETS_SECONDS)
-		end
-
-		if #models == 0 then
-			task.wait(1)
 		end
 	end
-end
-
-if not loopStarted then
-	loopStarted = true
-	task.spawn(runTeleportLoop)
-end
+end)
