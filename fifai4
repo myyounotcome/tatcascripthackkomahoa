@@ -1,0 +1,6 @@
+local player = game.Players.LocalPlayer
+local clickDetector = workspace.Lobby.Default:FindFirstChildOfClass("ClickDetector")
+
+if clickDetector then
+    fireclickdetector(clickDetector)
+end
