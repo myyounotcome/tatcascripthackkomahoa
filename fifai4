@@ -1,6 +1,23 @@
 local player = game.Players.LocalPlayer
-local clickDetector = workspace.Lobby.Default:FindFirstChildOfClass("ClickDetector")
 
-if clickDetector then
-    fireclickdetector(clickDetector)
+local gui = Instance.new("ScreenGui")
+gui.Parent = player.PlayerGui
+
+local label = Instance.new("TextLabel")
+label.Size = UDim2.new(0,300,0,50)
+label.Position = UDim2.new(0,10,0,10)
+label.Parent = gui
+
+while true do
+	task.wait(0.1)
+
+	local character = player.Character
+	if character and character:FindFirstChild("HumanoidRootPart") then
+		local pos = character.HumanoidRootPart.Position
+
+		label.Text = string.format(
+			"X: %.1f\nY: %.1f\nZ: %.1f",
+			pos.X, pos.Y, pos.Z
+		)
+	end
 end
