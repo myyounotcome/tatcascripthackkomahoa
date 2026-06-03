@@ -41,7 +41,7 @@ task.spawn(function()
 			local hrp = character and character:FindFirstChild("HumanoidRootPart")
 
 			local slapplesFolder = workspace:FindFirstChild("Arena")
-				and workspace.Arena:FindFirstChild("isLand5")
+				and workspace.Arena:FindFirstChild("isLand")
 				and workspace.Arena.isLand5:FindFirstChild("Slapples")
 
 			if hrp and slapplesFolder then
