@@ -1,13 +1,6 @@
 local player = game.Players.LocalPlayer
 local character = player.Character or player.CharacterAdded:Wait()
 
-local slapple = workspace.Arena.island5.Slapples.Slapple
+local handle = workspace.Arena.island5.Slapples.Slapple4.HandleLight
 
-if slapple.PrimaryPart then
-    character:PivotTo(slapple.PrimaryPart.CFrame)
-else
-    local part = slapple:FindFirstChildWhichIsA("BasePart", true)
-    if part then
-        character:PivotTo(part.CFrame)
-    end
-end
+character:PivotTo(handle.CFrame)
